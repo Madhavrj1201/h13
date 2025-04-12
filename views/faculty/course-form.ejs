@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <%- include('../partials/navbar') %>
+
+    <main class="container">
+        <%- include('../partials/flash') %>
+
+        <div class="form-container">
+            <h2><%= course ? 'Edit Course' : 'Create New Course' %></h2>
+            <form action="<%= course ? `/faculty/courses/${course._id}` : '/faculty/courses/new' %>" method="POST" class="course-form">
+                <div class="form-group">
+                    <label for="title">Course Title</label>
+                    <input type="text" id="title" name="title" value="<%= course ? course.title : '' %>" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="code">Course Code</label>
+                    <input type="text" id="code" name="code" value="<%= course ? course.code : '' %>" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <textarea id="description" name="description" rows="4"><%= course ? course.description : '' %></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="type">Course Type</label>
+                    <select id="type" name="type" required>
+                        <option value="academic" <%= course && course.type === 'academic' ? 'selected' : '' %>>Academic</option>
+                        <option value="coding" <%= course && course.type === 'coding' ? 'selected' : '' %>>Coding</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="maxStudents">Maximum Students</label>
+                    <input type="number" id="maxStudents" name="maxStudents" value="<%= course ? course.maxStudents : 60 %>" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="semester">Semester</label>
+                    <input type="number" id="semester" name="semester" value="<%= course ? course.semester : '' %>" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="department">Department</label>
+                    <input type="text" id="department" name="department" value="<%= course ? course.department : '' %>" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="credits">Credits</label>
+                    <input type="number" id="credits" name="credits" value="<%= course ? course.credits : '' %>" required>
+                </div>
+
+                <button type="submit" class="btn btn-primary"><%= course ? 'Update Course' : 'Create Course' %></button>
+                <a href="/faculty/courses" class="btn btn-secondary">Cancel</a>
+            </form>
+        </div>
+    </main>
+
+    <%- include('../partials/footer') %>
+
+    <style>
+        .form-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .course-form {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .form-group {
+            display: grid;
+            gap: 0.5rem;
+        }
+
+        .form-group label {
+            font-weight: bold;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+
+        .flash-message {
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 4px;
+        }
+
+        .flash-message.error {
+            background-color: #fee2e2;
+            border: 1px solid #ef4444;
+            color: #b91c1c;
+        }
+
+        .flash-message.success {
+            background-color: #dcfce7;
+            border: 1px solid #22c55e;
+            color: #15803d;
+        }
+
+        .message {
+            margin: 0.25rem 0;
+        }
+    </style>
+</body>
+</html>

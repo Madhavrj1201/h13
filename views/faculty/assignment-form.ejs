@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <%- include('../partials/navbar') %>
+
+    <main class="container">
+        <%- include('../partials/flash') %>
+
+        <div class="form-container">
+            <h2>Create New Assignment</h2>
+            <form id="assignmentForm" class="assignment-form">
+                <div class="form-group">
+                    <label for="courseId">Course</label>
+                    <select id="courseId" name="courseId" required>
+                        <option value="">Select Course</option>
+                        <% courses.forEach(course => { %>
+                            <option value="<%= course._id %>"><%= course.title %></option>
+                        <% }) %>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="title">Assignment Title</label>
+                    <input type="text" id="title" name="title" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="description">Description</label>
+                    <textarea id="description" name="description" rows="4"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="dueDate">Due Date</label>
+                    <input type="datetime-local" id="dueDate" name="dueDate" required>
+                </div>
+
+                <div id="testCases">
+                    <h3>Test Cases</h3>
+                    <button type="button" class="btn btn-secondary" onclick="addTestCase()">Add Test Case</button>
+                    <div id="testCasesList"></div>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Create Assignment</button>
+                <a href="/faculty/courses" class="btn btn-secondary">Cancel</a>
+            </form>
+        </div>
+    </main>
+
+    <%- include('../partials/footer') %>
+
+    <script>
+        function addTestCase() {
+            const testCasesList = document.getElementById('testCasesList');
+            const testCaseDiv = document.createElement('div');
+            testCaseDiv.className = 'test-case';
+            testCaseDiv.innerHTML = `
+                <div class="form-group">
+                    <label>Input</label>
+                    <textarea name="input" rows="2"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Expected Output</label>
+                    <textarea name="expectedOutput" rows="2"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Points</label>
+                    <input type="number" name="points" value="10">
+                </div>
+                <button type="button" class="btn btn-danger" onclick="this.parentElement.remove()">Remove</button>
+            `;
+            testCasesList.appendChild(testCaseDiv);
+        }
+
+        document.getElementById('assignmentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const testCases = Array.from(document.querySelectorAll('.test-case')).map(testCase => ({
+                input: testCase.querySelector('[name="input"]').value,
+                expectedOutput: testCase.querySelector('[name="expectedOutput"]').value,
+                points: parseInt(testCase.querySelector('[name="points"]').value)
+            }));
+
+            const formData = {
+                courseId: document.getElementById('courseId').value,
+                title: document.getElementById('title').value,
+                description: document.getElementById('description').value,
+                dueDate: document.getElementById('dueDate').value,
+                testCases: JSON.stringify(testCases)
+            };
+
+            try {
+                const response = await fetch('/faculty/assignments/new', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    window.location.href = `/faculty/courses/${formData.courseId}`;
+                } else {
+                    alert('Failed to create assignment');
+                }
+            } catch (error) {
+                alert('Error creating assignment: ' + error.message);
+            }
+        });
+    </script>
+
+    <style>
+        .form-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .assignment-form {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .form-group {
+            display: grid;
+            gap: 0.5rem;
+        }
+
+        .form-group label {
+            font-weight: bold;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+
+        .test-case {
+            margin: 1rem 0;
+            padding: 1rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .flash-message {
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 4px;
+        }
+
+        .flash-message.error {
+            background-color: #fee2e2;
+            border: 1px solid #ef4444;
+            color: #b91c1c;
+        }
+
+        .flash-message.success {
+            background-color: #dcfce7;
+            border: 1px solid #22c55e;
+            color: #15803d;
+        }
+
+        .message {
+            margin: 0.25rem 0;
+        }
+    </style>
+</body>
+</html>

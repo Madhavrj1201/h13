@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <%- include('../partials/navbar') %>
+
+    <main class="container">
+        <%- include('../partials/flash') %>
+        
+        <h2>My Courses</h2>
+        <div class="courses-grid">
+            <% if (enrolledCourses.length > 0) { %>
+                <% enrolledCourses.forEach(course => { %>
+                    <div class="course-card">
+                        <h3><%= course.title %></h3>
+                        <p><%= course.description %></p>
+                        <p>Instructor: <%= course.instructor.profile.firstName %> <%= course.instructor.profile.lastName %></p>
+                        <p>Type: <%= course.type.charAt(0).toUpperCase() + course.type.slice(1) %></p>
+                        <a href="/student/courses/<%= course._id %>" class="btn btn-primary">View Course</a>
+                    </div>
+                <% }) %>
+            <% } else { %>
+                <p>You are not enrolled in any courses.</p>
+            <% } %>
+        </div>
+
+        <h2>Available Courses</h2>
+        <div class="courses-grid">
+            <% if (courses.length > 0) { %>
+                <% courses.forEach(course => { %>
+                    <div class="course-card">
+                        <h3><%= course.title %></h3>
+                        <p><%= course.description %></p>
+                        <p>Instructor: <%= course.instructor.profile.firstName %> <%= course.instructor.profile.lastName %></p>
+                        <p>Type: <%= course.type.charAt(0).toUpperCase() + course.type.slice(1) %></p>
+                        <form action="/student/courses/<%= course._id %>/enroll" method="POST">
+                            <button type="submit" class="btn btn-primary">Enroll</button>
+                        </form>
+                    </div>
+                <% }) %>
+            <% } else { %>
+                <p>No courses available at the moment.</p>
+            <% } %>
+        </div>
+    </main>
+
+    <%- include('../partials/footer') %>
+
+    <style>
+        .flash-message {
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 4px;
+        }
+
+        .flash-message.error {
+            background-color: #fee2e2;
+            border: 1px solid #ef4444;
+            color: #b91c1c;
+        }
+
+        .flash-message.success {
+            background-color: #dcfce7;
+            border: 1px solid #22c55e;
+            color: #15803d;
+        }
+
+        .message {
+            margin: 0.25rem 0;
+        }
+    </style>
+</body>
+</html>
