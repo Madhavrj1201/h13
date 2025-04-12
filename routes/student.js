@@ -25,17 +25,15 @@ router.get('/dashboard', asyncHandler(async (req, res) => {
 
 // Course Routes
 router.get('/courses', asyncHandler(async (req, res) => {
+  // Get enrolled courses
   const enrolledCourses = await Course.find({
     'students': req.user._id
   }).populate('instructor', 'profile.firstName profile.lastName');
 
+  // Get available courses (not enrolled)
   const availableCourses = await Course.find({
-    status: 'active',
-    students: { $ne: req.user._id },
-    $or: [
-      { maxStudents: { $gt: { $size: '$students' } } },
-      { maxStudents: { $exists: false } }
-    ]
+    'students': { $ne: req.user._id },
+    'status': 'active'
   }).populate('instructor', 'profile.firstName profile.lastName');
 
   res.render('student/courses', {

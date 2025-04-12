@@ -45,210 +45,271 @@ router.use(isFaculty);
 
 // Dashboard
 router.get('/dashboard', asyncHandler(async (req, res) => {
-  const courses = await Course.find({ instructor: req.user._id })
-    .populate('students')
-    .populate('assignments');
+  try {
+    const courses = await Course.find({ instructor: req.user._id })
+      .populate('students')
+      .populate('assignments');
 
-  const analytics = await generateCourseAnalytics(courses);
+    const analytics = await generateCourseAnalytics(courses);
 
-  res.render('faculty/dashboard', {
-    title: 'Faculty Dashboard',
-    user: req.user,
-    courses,
-    analytics,
-    activities: []
-  });
+    res.render('faculty/dashboard', {
+      title: 'Faculty Dashboard',
+      user: req.user,
+      courses,
+      analytics,
+      activities: []
+    });
+  } catch (error) {
+    console.error('Dashboard Error:', error);
+    req.flash('error', 'Error loading dashboard');
+    res.status(500).render('error', { 
+      message: 'Error loading dashboard',
+      error: { status: 500, stack: error.stack }
+    });
+  }
 }));
 
 // Course Routes
 router.get('/courses', asyncHandler(async (req, res) => {
-  const courses = await Course.find({ instructor: req.user._id })
-    .populate('students')
-    .populate('assignments');
-  
-  res.render('faculty/courses', {
-    title: 'My Courses',
-    user: req.user,
-    courses
-  });
+  try {
+    const courses = await Course.find({ instructor: req.user._id })
+      .populate('students')
+      .populate('assignments')
+      .sort('-createdAt');
+
+    res.render('faculty/courses', {
+      title: 'My Courses',
+      user: req.user,
+      courses
+    });
+  } catch (error) {
+    console.error('Courses Error:', error);
+    req.flash('error', 'Error loading courses');
+    res.redirect('/faculty/dashboard');
+  }
 }));
 
 router.get('/courses/new', asyncHandler(async (req, res) => {
-  res.render('faculty/course-form', {
-    title: 'Create New Course',
-    user: req.user,
-    course: null
-  });
+  try {
+    res.render('faculty/course-form', {
+      title: 'Create New Course',
+      user: req.user,
+      course: null
+    });
+  } catch (error) {
+    console.error('New Course Form Error:', error);
+    req.flash('error', 'Error loading course form');
+    res.redirect('/faculty/courses');
+  }
 }));
 
 router.post('/courses/new', asyncHandler(async (req, res) => {
-  const { title, code, description, type, maxStudents, semester, department, credits } = req.body;
+  try {
+    const { title, code, description, type, maxStudents, semester, department, credits } = req.body;
 
-  const courseExists = await Course.findOne({ code });
-  if (courseExists) {
-    req.flash('error', 'Course code already exists');
-    return res.redirect('/faculty/courses/new');
+    const courseExists = await Course.findOne({ code });
+    if (courseExists) {
+      req.flash('error', 'Course code already exists');
+      return res.redirect('/faculty/courses/new');
+    }
+
+    const course = new Course({
+      title,
+      code,
+      description,
+      instructor: req.user._id,
+      type,
+      maxStudents,
+      semester,
+      department,
+      credits,
+      status: 'active'
+    });
+
+    await course.save();
+    req.flash('success', 'Course created successfully');
+    res.redirect(`/faculty/courses/${course._id}`);
+  } catch (error) {
+    console.error('Create Course Error:', error);
+    req.flash('error', 'Error creating course');
+    res.redirect('/faculty/courses/new');
   }
-
-  const course = new Course({
-    title,
-    code,
-    description,
-    instructor: req.user._id,
-    type,
-    maxStudents,
-    semester,
-    department,
-    credits,
-    status: 'active'
-  });
-
-  await course.save();
-  req.flash('success', 'Course created successfully');
-  res.redirect(`/faculty/courses/${course._id}`);
 }));
 
 router.get('/courses/:id', asyncHandler(async (req, res) => {
-  const course = await Course.findOne({
-    _id: req.params.id,
-    instructor: req.user._id
-  }).populate('students')
-    .populate('assignments')
-    .populate('attendance');
+  try {
+    const course = await Course.findOne({
+      _id: req.params.id,
+      instructor: req.user._id
+    }).populate('students')
+      .populate('assignments')
+      .populate('attendance');
 
-  if (!course) {
-    req.flash('error', 'Course not found');
-    return res.redirect('/faculty/dashboard');
+    if (!course) {
+      req.flash('error', 'Course not found');
+      return res.redirect('/faculty/dashboard');
+    }
+
+    res.render('faculty/course-management', {
+      title: 'Course Management',
+      user: req.user,
+      course
+    });
+  } catch (error) {
+    console.error('Course Management Error:', error);
+    req.flash('error', 'Error loading course');
+    res.redirect('/faculty/courses');
   }
-
-  res.render('faculty/course-management', {
-    title: 'Course Management',
-    user: req.user,
-    course
-  });
 }));
 
 // Course Content Routes
 router.post('/courses/:id/content', upload.array('files', 5), asyncHandler(async (req, res) => {
-  const { title, type, description, dueDate } = req.body;
-  const files = req.files.map(file => `/uploads/course-content/${file.filename}`);
+  try {
+    const { title, type, description, dueDate } = req.body;
+    const files = req.files.map(file => `/uploads/course-content/${file.filename}`);
 
-  const course = await Course.findOne({
-    _id: req.params.id,
-    instructor: req.user._id
-  });
+    const course = await Course.findOne({
+      _id: req.params.id,
+      instructor: req.user._id
+    });
 
-  if (!course) {
-    req.flash('error', 'Course not found');
-    return res.redirect('/faculty/dashboard');
+    if (!course) {
+      req.flash('error', 'Course not found');
+      return res.redirect('/faculty/dashboard');
+    }
+
+    course.content.push({
+      title,
+      type,
+      description,
+      attachments: files,
+      dueDate: dueDate || null,
+      isPublished: true,
+      publishDate: new Date()
+    });
+
+    await course.save();
+    req.flash('success', 'Content added successfully');
+    res.redirect(`/faculty/courses/${req.params.id}`);
+  } catch (error) {
+    console.error('Add Content Error:', error);
+    req.flash('error', 'Error adding content');
+    res.redirect(`/faculty/courses/${req.params.id}`);
   }
-
-  course.content.push({
-    title,
-    type,
-    description,
-    attachments: files,
-    dueDate: dueDate || null,
-    isPublished: true,
-    publishDate: new Date()
-  });
-
-  await course.save();
-  req.flash('success', 'Content added successfully');
-  res.redirect(`/faculty/courses/${req.params.id}`);
 }));
 
 // Assignment Routes
 router.get('/assignments/new', asyncHandler(async (req, res) => {
-  const courses = await Course.find({ instructor: req.user._id });
-  res.render('faculty/assignment-form', {
-    title: 'Create New Assignment',
-    user: req.user,
-    courses
-  });
+  try {
+    const courses = await Course.find({ instructor: req.user._id });
+    res.render('faculty/assignment-form', {
+      title: 'Create New Assignment',
+      user: req.user,
+      courses
+    });
+  } catch (error) {
+    console.error('New Assignment Form Error:', error);
+    req.flash('error', 'Error loading assignment form');
+    res.redirect('/faculty/courses');
+  }
 }));
 
 router.post('/assignments/new', asyncHandler(async (req, res) => {
-  const { title, description, dueDate, testCases, courseId } = req.body;
+  try {
+    const { title, description, dueDate, testCases, courseId } = req.body;
 
-  const course = await Course.findOne({
-    _id: courseId,
-    instructor: req.user._id
-  });
+    const course = await Course.findOne({
+      _id: courseId,
+      instructor: req.user._id
+    });
 
-  if (!course) {
-    return res.status(404).json({ error: 'Course not found' });
+    if (!course) {
+      return res.status(404).json({ error: 'Course not found' });
+    }
+
+    const assignment = new Assignment({
+      title,
+      description,
+      type: 'coding',
+      course: courseId,
+      dueDate,
+      testCases: JSON.parse(testCases)
+    });
+
+    await assignment.save();
+    course.assignments.push(assignment._id);
+    await course.save();
+
+    res.json({ success: true, assignmentId: assignment._id });
+  } catch (error) {
+    console.error('Create Assignment Error:', error);
+    res.status(500).json({ error: 'Error creating assignment' });
   }
-
-  const assignment = new Assignment({
-    title,
-    description,
-    type: 'coding',
-    course: courseId,
-    dueDate,
-    testCases: JSON.parse(testCases)
-  });
-
-  await assignment.save();
-  course.assignments.push(assignment._id);
-  await course.save();
-
-  res.json({ success: true, assignmentId: assignment._id });
 }));
 
 // Attendance Routes
 router.post('/attendance/mark', asyncHandler(async (req, res) => {
-  const { courseId, date, attendance } = req.body;
+  try {
+    const { courseId, date, attendance } = req.body;
 
-  const course = await Course.findOne({
-    _id: courseId,
-    instructor: req.user._id
-  });
+    const course = await Course.findOne({
+      _id: courseId,
+      instructor: req.user._id
+    });
 
-  if (!course) {
-    return res.status(404).json({ error: 'Course not found' });
+    if (!course) {
+      return res.status(404).json({ error: 'Course not found' });
+    }
+
+    const attendanceRecord = new Attendance({
+      course: courseId,
+      date: new Date(date),
+      students: Object.entries(attendance).map(([studentId, status]) => ({
+        student: studentId,
+        status,
+        markedBy: req.user._id,
+        markedAt: new Date()
+      }))
+    });
+
+    await attendanceRecord.save();
+    course.attendance.push(attendanceRecord._id);
+    await course.save();
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Mark Attendance Error:', error);
+    res.status(500).json({ error: 'Error marking attendance' });
   }
-
-  const attendanceRecord = new Attendance({
-    course: courseId,
-    date: new Date(date),
-    students: Object.entries(attendance).map(([studentId, status]) => ({
-      student: studentId,
-      status,
-      markedBy: req.user._id,
-      markedAt: new Date()
-    }))
-  });
-
-  await attendanceRecord.save();
-  course.attendance.push(attendanceRecord._id);
-  await course.save();
-
-  res.json({ success: true });
 }));
 
 // Analytics Routes
 router.get('/courses/:id/analytics', asyncHandler(async (req, res) => {
-  const course = await Course.findOne({
-    _id: req.params.id,
-    instructor: req.user._id
-  }).populate('students')
-    .populate('assignments')
-    .populate('attendance');
+  try {
+    const course = await Course.findOne({
+      _id: req.params.id,
+      instructor: req.user._id
+    }).populate('students')
+      .populate('assignments')
+      .populate('attendance');
 
-  if (!course) {
-    return res.status(404).json({ error: 'Course not found' });
+    if (!course) {
+      return res.status(404).json({ error: 'Course not found' });
+    }
+
+    const analytics = {
+      totalStudents: course.students.length,
+      averageAttendance: calculateAverageAttendance(course.attendance),
+      assignmentCompletion: calculateAssignmentCompletion(course.assignments, course.students),
+      performanceDistribution: generatePerformanceDistribution(course.assignments, course.students),
+      weeklyEngagement: await calculateWeeklyEngagement(course._id)
+    };
+
+    res.json(analytics);
+  } catch (error) {
+    console.error('Analytics Error:', error);
+    res.status(500).json({ error: 'Error generating analytics' });
   }
-
-  const analytics = {
-    totalStudents: course.students.length,
-    averageAttendance: calculateAverageAttendance(course.attendance),
-    assignmentCompletion: calculateAssignmentCompletion(course.assignments, course.students),
-    performanceDistribution: generatePerformanceDistribution(course.assignments, course.students),
-    weeklyEngagement: await calculateWeeklyEngagement(course._id)
-  };
-
-  res.json(analytics);
 }));
 
 // Helper Functions
